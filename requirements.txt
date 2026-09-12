@@ -1,2 +1,3 @@
 Flask
-gunicorn
+Gunicorn
+psycopg2-binary
