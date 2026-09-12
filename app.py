@@ -1,5 +1,6 @@
 from flask import Flask, request, redirect, session
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import re
 import difflib
 import random
@@ -26,10 +27,12 @@ MAX_OTP_ATTEMPTS = 5
 # ==================================================
 # DATABASE
 # ==================================================
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 def get_connection():
-    connection = sqlite3.connect("database.db")
-    connection.row_factory = sqlite3.Row
-    return connection
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not configured in Vercel.")
+    return psycopg2.connect(DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor)
 
 
 def create_database():
@@ -38,7 +41,7 @@ def create_database():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
@@ -47,7 +50,7 @@ def create_database():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             item_name TEXT NOT NULL,
             category TEXT NOT NULL,
             location TEXT NOT NULL,
@@ -62,7 +65,7 @@ def create_database():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS claims (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             item_id INTEGER NOT NULL,
             claimant_id INTEGER NOT NULL,
             verified INTEGER DEFAULT 0,
@@ -737,7 +740,7 @@ def register():
 
                 cursor.execute("""
                     INSERT INTO users (name, email, password)
-                    VALUES (?, ?, ?)
+                    VALUES (%s, %s, %s)
                 """, (name, email, password))
 
                 connection.commit()
@@ -745,7 +748,7 @@ def register():
 
                 return redirect("/login")
 
-            except sqlite3.IntegrityError:
+            except psycopg2.IntegrityError:
 
                 error_message = (
                     "❌ This email is already registered!"
@@ -792,7 +795,7 @@ def register():
         </p>
 
         <a href="/login">
-            Already have an account? Login
+            Already have an account%s Login
         </a>
     """
 
@@ -826,7 +829,7 @@ def login():
             cursor.execute("""
                 SELECT *
                 FROM users
-                WHERE email = ? AND password = ?
+                WHERE email = %s AND password = %s
             """, (email, password))
 
             user = cursor.fetchone()
@@ -874,13 +877,13 @@ def login():
         </p>
 
         <a href="/register">
-            Don't have an account? Register
+            Don't have an account%s Register
         </a>
 
         <br><br>
 
         <a href="/forgot-password">
-            🔑 Forgot Password?
+            🔑 Forgot Password%s
         </a>
     """
 
@@ -911,7 +914,7 @@ def forgot_password():
             cursor = connection.cursor()
 
             cursor.execute(
-                "SELECT id FROM users WHERE email = ?",
+                "SELECT id FROM users WHERE email = %s",
                 (email,)
             )
 
@@ -1145,8 +1148,8 @@ def reset_password():
 
             cursor.execute("""
                 UPDATE users
-                SET password = ?
-                WHERE email = ?
+                SET password = %s
+                WHERE email = %s
             """, (new_password, email))
 
             connection.commit()
@@ -1226,7 +1229,7 @@ def dashboard():
         </h2>
 
         <p class="center">
-            What would you like to do?
+            What would you like to do%s
         </p>
 
         <div class="center">
@@ -1289,7 +1292,7 @@ def report():
                 finder_id,
                 status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             item_name,
             category,
@@ -1642,7 +1645,7 @@ def claim_item(item_id):
         FROM items
         JOIN users
         ON items.finder_id = users.id
-        WHERE items.id = ?
+        WHERE items.id = %s
     """, (item_id,))
 
     item = cursor.fetchone()
@@ -1682,8 +1685,8 @@ def claim_item(item_id):
         cursor.execute("""
             SELECT *
             FROM claims
-            WHERE item_id = ?
-            AND claimant_id = ?
+            WHERE item_id = %s
+            AND claimant_id = %s
             AND verified = 1
         """, (item_id, session["user_id"]))
 
@@ -1729,8 +1732,8 @@ def claim_item(item_id):
             cursor.execute("""
                 SELECT *
                 FROM claims
-                WHERE item_id = ?
-                AND claimant_id = ?
+                WHERE item_id = %s
+                AND claimant_id = %s
             """, (
                 item_id,
                 session["user_id"]
@@ -1747,7 +1750,7 @@ def claim_item(item_id):
                         verified,
                         received
                     )
-                    VALUES (?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s)
                 """, (
                     item_id,
                     session["user_id"],
@@ -1760,8 +1763,8 @@ def claim_item(item_id):
                 cursor.execute("""
                     UPDATE claims
                     SET verified = 1
-                    WHERE item_id = ?
-                    AND claimant_id = ?
+                    WHERE item_id = %s
+                    AND claimant_id = %s
                 """, (
                     item_id,
                     session["user_id"]
@@ -1771,7 +1774,7 @@ def claim_item(item_id):
             cursor.execute("""
                 UPDATE items
                 SET status = 'Claimed'
-                WHERE id = ?
+                WHERE id = %s
             """, (item_id,))
 
             connection.commit()
@@ -1826,7 +1829,7 @@ def claim_item(item_id):
                 </p>
 
                 <h3>
-                    Have you received your item?
+                    Have you received your item%s
                 </h3>
 
                 <form method="POST"
@@ -1986,8 +1989,8 @@ def received_item(item_id):
     cursor.execute("""
         SELECT *
         FROM claims
-        WHERE item_id = ?
-        AND claimant_id = ?
+        WHERE item_id = %s
+        AND claimant_id = %s
         AND verified = 1
     """, (
         item_id,
@@ -2089,8 +2092,8 @@ def received_item(item_id):
         cursor.execute("""
             UPDATE claims
             SET received = 1
-            WHERE item_id = ?
-            AND claimant_id = ?
+            WHERE item_id = %s
+            AND claimant_id = %s
         """, (
             item_id,
             session["user_id"]
@@ -2099,7 +2102,7 @@ def received_item(item_id):
         cursor.execute("""
             UPDATE items
             SET status = 'Returned'
-            WHERE id = ?
+            WHERE id = %s
         """, (item_id,))
 
         connection.commit()
