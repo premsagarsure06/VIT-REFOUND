@@ -493,11 +493,31 @@ def page(title, body):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>{title}</title>
+    <title>{title} | VIT REFOUND – VIT-AP Lost and Found</title>
 
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+          content="VIT REFOUND is the VIT-AP Lost and Found platform for reporting, searching, verifying, and claiming lost and found items on campus.">
 
+    <meta name="keywords"
+          content="VIT REFOUND, VIT-AP Lost and Found, VIT AP lost items, VIT AP found items, VIT AP lost and found">
+
+    <meta name="robots"
+          content="index, follow">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta property="og:title"
+          content="VIT REFOUND – VIT-AP Lost and Found">
+
+    <meta property="og:description"
+          content="VIT-AP campus platform for reporting, searching, verifying, and claiming lost and found items.">
+
+    <meta property="og:url"
+          content="https://vit-refound.vercel.app/">
+
+    <meta property="og:type"
+          content="website">
         <style>
             body {{
                 font-family: Arial, sans-serif;
