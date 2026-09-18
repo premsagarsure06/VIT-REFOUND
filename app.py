@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, session
+from flask import Flask, request, redirect, session, send_from_directory
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import re
@@ -10,6 +10,12 @@ from email.message import EmailMessage
 from datetime import datetime
 
 app = Flask(__name__)
+@app.route("/google18764604b74a2c6d.html")
+def google_verification():
+    return send_from_directory(
+        ".",
+        "google18764604b74a2c6d.html"
+    )
 app.secret_key =os.environ.get("SECRET_KEY")
 
 # ==================================================
