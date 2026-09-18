@@ -16,6 +16,18 @@ def google_verification():
         ".",
         "google18764604b74a2c6d.html"
     )
+@app.route("/sitemap.xml")
+def sitemap():
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://vit-refound.vercel.app/</loc>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+</urlset>
+"""
+    return xml, 200, {"Content-Type": "application/xml"}
 app.secret_key =os.environ.get("SECRET_KEY")
 
 # ==================================================
